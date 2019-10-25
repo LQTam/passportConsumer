@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
+use GuzzleHttp\Client;
 
 class RegisterController extends BaseController
 {
@@ -23,13 +24,21 @@ class RegisterController extends BaseController
         if($validator->fails()){
             return $this->sendError('Validation Error.',$validator->errors());
         }
+        $user = User::create($validator);
 
-        $input = $req->all();
-        $input['password'] = Hash::make($input['password']);
-        $user = User::create($input);
-        $success['token'] = $user->createToken('maimai1A')->accessToken;
-        $success['name'] = $user->name;
-        return $this->sendResponse($success,'User register successfully!');
+        $http = new Client();
+        $response = $http->post(env('APP_URL').'/oauth/token', [
+            'form_params' => [
+                'grant_type' => 'password',
+                'client_id' => env('PASSWORD_GRANT_CLIENT_ID'),
+                'client_secret' => env('PASSWORD_GRANT_CLIENT_SECRET'),
+                'username' => $req->get('email'),
+                'password' => $req->get('password'),
+                'scope' => '',
+            ],
+        ]);
+
+        return json_decode((string)$response->getBody(), true);
     }
 
     public function login(Request $req){
@@ -49,7 +58,7 @@ class RegisterController extends BaseController
         // dd($request->session('token'));
         $query = http_build_query([
             'client_id' => '3',
-            'redirect_uri' => 'http://localhost:3000/callback',
+            'redirect_uri' => 'http://consumer.test/callback',
             'response_type' => 'code',
             'scope' => '',
             'state' => $state,
@@ -66,19 +75,26 @@ class RegisterController extends BaseController
         //     InvalidArgumentException::class
         // );
 
-        $http = new GuzzleHttp\Client;
 
-        $response = $http->post('http://passport.test/oauth/token', [
+        $response = (new Client)->post('http://passport.test/oauth/token', [
+            // 'form_params' => [
+            //     'grant_type' => 'authorization_code',
+            //     'client_id' => '3',
+            //     'client_secret' => 'stGlJ2Rc11lhXUoR76uIiqYt1kH9pI3RdkoHks3R',
+            //     'redirect_uri' => 'http://consumer.test/callback',
+            //     'code' => $request->code,
+            // ],
             'form_params' => [
-                'grant_type' => 'authorization_code',
+                'grant_type' => 'password',
                 'client_id' => '3',
                 'client_secret' => 'stGlJ2Rc11lhXUoR76uIiqYt1kH9pI3RdkoHks3R',
-                'redirect_uri' => 'http://localhost:3000/callback',
-                'code' => $request->code,
+                'username' => "sendlaravel.example@gmail.com",
+                'password' => 'sendlaravel.example@gmail.com',
+                'scope' => '*',
             ],
         ]);
 
         session()->put('token',json_decode((string) $response->getBody(), true));
-        return redirect('/user');
+        return redirect('/home');
     }
 }

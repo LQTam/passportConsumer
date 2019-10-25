@@ -14,11 +14,11 @@
 use Illuminate\Http\Request;
 use Laravel\Passport\Client;
 
-// Route::get( '/', function( ){
-//     return view('welcome');
-// });
+Route::get( '/', function( ){
+    return view('welcome2');
+});
 
-Route::view('/', 'welcome');
+// Route::view('/{any?}', 'welcome');
 
 Route::get('/redirect','Api\RegisterController@redirect');
 Route::get('/callback','Api\RegisterController@callback');
